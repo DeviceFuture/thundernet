@@ -61,14 +61,10 @@ app.get("/access", function(req, res) {
 
     var resource;
 
-    resources.retrieveResource(req.query["url"]).then(function(returnedResource) {
-        resource = returnedResource;
+    resources.retrieveResource(req.query["url"]).then(function(retrievedResource) {
+        resource = retrievedResource;
 
-        return compression.compress(resource.buffer);
-    }).then(function(compressedByteArray) {
-        return Buffer.from(compressedByteArray);
-    }).then(function(compressedBuffer) {
-        return ep.encryptUsingEpid(compressedBuffer, req.query["epid"]).catch(function(error) {
+        return ep.encryptUsingEpid(resource.compressedBuffer, req.query["epid"]).catch(function(error) {
             console.error(error);
 
             res.status(400).json({"error": "unsatisfiedRestriction"});

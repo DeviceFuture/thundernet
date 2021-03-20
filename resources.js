@@ -2,6 +2,8 @@ const http = require("http");
 const https = require("https");
 
 var config = require("./config.js");
+var compression = require("./compression");
+var ep = require("./ep");
 
 const MAX_DEFAULT_REQUEST_SIZE = 10 * 1024 * 1024; // 10 KiB
 const MAX_REDIRECTION_DEPTH = 5;
@@ -11,6 +13,8 @@ exports.Resource = class {
         this.buffer = buffer;
         this.status = status;
         this.mimetype = mimetype;
+
+        this.compressedBuffer = null;
     }
 };
 
@@ -27,6 +31,12 @@ exports.performResourceRequest = function(url, redirectionDepth = 0) {
         (url.startsWith("https://") ? https : http).get(url, function(response) {
             var data = [];
             var size = 0;
+
+            if (Number(response.headers["content-length"]) > (config.data.size || MAX_DEFAULT_REQUEST_SIZE)) {
+                response.destroy();
+
+                reject("Resource has exceeded maximum request size");
+            }
 
             response.on("data", function(chunk) {
                 data.push(chunk);
@@ -62,5 +72,15 @@ exports.performResourceRequest = function(url, redirectionDepth = 0) {
 };
 
 exports.retrieveResource = function(url) {
-    return exports.performResourceRequest(url);
+    var resource;
+
+    return exports.performResourceRequest(url).then(function(returnedResource) {
+        resource = returnedResource;
+
+        return compression.compress(resource.buffer);
+    }).then(function(compressedByteArray) {
+        resource.compressedBuffer = Buffer.from(compressedByteArray);
+
+        return resource;
+    });
 };
