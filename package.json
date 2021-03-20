@@ -1,0 +1,21 @@
+{
+    "name": "thundernet",
+    "version": "0.1.0",
+    "description": "A decentralised network to make the internet more sustainable.",
+    "main": "main.js",
+    "keywords": [
+        "sustainability",
+        "network",
+        "internet",
+        "caching",
+        "green"
+    ],
+    "author": "The DeviceFuture Authors",
+    "bin": {
+        "thundernet": "main.js"
+    },
+    "dependencies": {
+        "express": "^4.17.1",
+        "mkdirp": "^1.0.4"
+    }
+}
