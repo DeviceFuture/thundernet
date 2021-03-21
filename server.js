@@ -81,6 +81,23 @@ app.get("/access", function(req, res) {
     });
 });
 
+app.get("/version", function(req, res) {
+    if (
+        typeof(req.query["url"]) != "string"
+    ) {
+        res.status(400).json({"error": "unsatisfiedRestriction"});
+
+        return;
+    }
+
+    resources.retrieveResourceVersion(req.query["url"]).then(function(resourceVersion) {
+        res.status(200).json({
+            "hash": resourceVersion.hash,
+            "lastUpdated": resourceVersion.resource.lastUpdated.getTime()
+        });
+    });
+});
+
 exports.start = function(port = DEFAULT_PORT) {
     status.load();
 

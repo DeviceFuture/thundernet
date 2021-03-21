@@ -36,3 +36,9 @@ exports.encrypt = function(data, jwk) {
         return new exports.EncryptionData(encryptedData, counter);
     });
 };
+
+exports.hash = function(data) {
+    return crypto.subtle.digest("SHA-256", data).then(function(digest) {
+        return Buffer.from(digest).toString("hex");
+    });
+};

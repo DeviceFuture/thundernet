@@ -7,6 +7,7 @@ const mkdirp = require("mkdirp");
 
 var config = require("./config.js");
 var compression = require("./compression");
+var encryption = require("./encryption");
 var db = require("./db");
 var tools = require("./tools");
 
@@ -17,13 +18,21 @@ const CACHE_CLEAN_MAX_TIME = config.data.cacheCleanMaxTime || 7 * 24 * 60 * 60 *
 const CACHE_CLEAN_MAX_RETRIEVALS = config.data.cacheCleanMaxRetrievals || 1000; // 1,000 retrievals
 
 exports.Resource = class {
-    constructor(buffer, status, mimetype, fromCache = false) {
+    constructor(buffer, status, mimetype, fromCache = false, lastUpdated = null) {
         this.buffer = buffer;
         this.status = status;
         this.mimetype = mimetype;
         this.fromCache = fromCache;
+        this.lastUpdated = lastUpdated;
 
         this.compressedBuffer = null;
+    }
+};
+
+exports.ResourceVersion = class {
+    constructor(resource, hash) {
+        this.resource = resource;
+        this.hash = hash;
     }
 };
 
@@ -69,7 +78,9 @@ exports.performResourceRequest = function(url, redirectionDepth = 0) {
                 resolve(new exports.Resource(
                     Buffer.concat(data),
                     response.statusCode,
-                    response.headers["content-type"]
+                    response.headers["content-type"],
+                    false,
+                    new Date()
                 ));
             });
 
@@ -104,7 +115,8 @@ exports.findInCache = function(url) {
                     null,
                     doc.status,
                     doc.mimetype,
-                    true
+                    true,
+                    new Date(doc.firstRetrieved)
                 );
 
                 resource.compressedBuffer = Buffer.from(data);
@@ -170,6 +182,7 @@ exports.addToCache = function(resource, url) {
             resourceId,
             status: resource.status,
             mimetype: resource.mimetype,
+            firstRetrieved: new Date().getTime(),
             lastRetrieved: new Date().getTime(),
             timesRetrieved: 1
         }, function(error) {
@@ -210,4 +223,16 @@ exports.retrieveResource = function(url, forceCacheRefresh = false) {
             return Promise.resolve(resource);
         });
     });
+};
+
+exports.retrieveResourceVersion = function(url) {
+    var resource;
+
+    return exports.retrieveResource(url).then(function(retrievedResource) {
+        resource = retrievedResource;
+
+        return encryption.hash(resource.compressedBuffer);
+    }).then(function(hash) {
+        return new exports.ResourceVersion(resource, hash);
+    })
 };
