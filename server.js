@@ -61,7 +61,7 @@ app.get("/access", function(req, res) {
 
     var resource;
 
-    resources.retrieveResource(req.query["url"]).then(function(retrievedResource) {
+    resources.retrieveResource(req.query["url"], req.query["cache"] == "false").then(function(retrievedResource) {
         resource = retrievedResource;
 
         return ep.encryptUsingEpid(resource.compressedBuffer, req.query["epid"]).catch(function(error) {
