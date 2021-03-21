@@ -2,7 +2,10 @@ const path = require("path");
 const os = require("os");
 const Datastore = require("nedb");
 
-const ENDPOINT_PROFILES_COLLECTION_PATH = path.join(os.homedir(), ".config", "thundernet", "db", "ep.db");
+var config = require("./config");
+
+const DB_ROOT_PATH = config.data.dbRoot || path.join(os.homedir(), ".config", "thundernet", "db");
+const ENDPOINT_PROFILES_COLLECTION_PATH = path.join(DB_ROOT_PATH, "ep.db");
 
 exports.collections = {};
 
