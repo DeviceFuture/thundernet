@@ -15,6 +15,7 @@ const app = express();
 const DEFAULT_PORT = 44444;
 const API_LEVEL = 0;
 
+// TODO: Implement this check in routes
 function statusBlocked(res) {
     if (status.status != "active") {
         res.status(503).json({"error": "statusNotActive"});
