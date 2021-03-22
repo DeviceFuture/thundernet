@@ -65,8 +65,6 @@ exports.performResourceRequest = function(url, redirectionDepth = 0) {
             var data = [];
             var size = 0;
 
-            console.log(Number(response.headers["content-length"]) > MAX_REQUEST_SIZE);
-
             if (Number(response.headers["content-length"]) > MAX_REQUEST_SIZE) {
                 response.destroy();
 
