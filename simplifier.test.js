@@ -1,7 +1,9 @@
 const simplifier = require("./simplifier");
 const resources = require("./resources");
 
-var url = "https://edition.cnn.com/2021/03/24/world/mass-shootings-international-response-intl/index.html";
+// TODO: Remove this script once simplification code is complete
+
+var url = "";
 
 resources.retrieveResource(url, true).then(function(resource) {
     console.log("Downloaded. Parsing...");
