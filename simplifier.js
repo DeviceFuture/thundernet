@@ -78,7 +78,11 @@ exports.createNavigation = function(document) {
         }
 
         if (element.querySelectorAll("svg").length > 0) {
-            newLinkImage.src = "data:image/svg+xml," + encodeURIComponent(element.querySelectorAll("svg")[0].outerHTML.replace(`<svg `, `<svg xmlns="http://www.w3.org/2000/svg" `));
+            if (element.querySelectorAll("svg")[0].outerHTML.match(/xmlns/)) {
+                newLinkImage.src = "data:image/svg+xml," + encodeURIComponent(element.querySelectorAll("svg")[0].outerHTML);
+            } else {
+                newLinkImage.src = "data:image/svg+xml," + encodeURIComponent(element.querySelectorAll("svg")[0].outerHTML.replace(`<svg `, `<svg xmlns="http://www.w3.org/2000/svg" `));
+            }
 
             newLinkImageInUse = true;
         }
