@@ -8,12 +8,41 @@
 const jsdom = require("jsdom");
 
 const DENY_HEADER_KEYWORDS = ["signin", "sign-in", "login", "log-in", "signout", "sign-out", "logout", "log-out", "account", "continue", "search", "join", "signup", "sign-up", "register", "session"];
+const DENY_ELEMENT_ATTRIBUTES = ["id", "class", "style"];
+
+function findClosestElementDescendent(element, candidateParents) {
+    var parentElement = element.parentNode;
+
+    while (parentElement) {
+        for (var i = 0; i < candidateParents.length; i++) {
+            if (parentElement.isEqualNode(candidateParents[i])) {
+                return parentElement;
+            }
+        }
+
+        parentElement = parentElement.parentNode;
+    }
+
+    return null;
+}
+
+function isInElementOf(element, parentTagName) {
+    var parentElement = element.parentNode;
+
+    while (parentElement) {
+        if (parentElement.tagName == parentTagName) {
+            return true;
+        }
+
+        parentElement = parentElement.parentNode;
+    }
+
+    return false;
+}
 
 exports.createNavigation = function(document) {
     var navigationElement = document.createElement("nav");
     var logoImageAvailable = true;
-
-    console.log(document.querySelectorAll("header, nav"));
 
     if (document.querySelectorAll("header, nav").length == 0) {
         var homeLink = document.createElement("a");
@@ -27,10 +56,7 @@ exports.createNavigation = function(document) {
     }
 
     document.querySelectorAll("header, nav")[0].querySelectorAll("a").forEach(function(element) {
-        if (
-            element.href.match(/#/g) || // Jump links
-            (String(element.style.width).endsWith("px") && parseInt(element.style.width) < 10) // Visually hidden links (but screen reader accessible)
-        ) {
+        if (element.href.match(/#/g)) { // Jump links
             return;
         }
 
@@ -102,6 +128,139 @@ exports.createNavigation = function(document) {
     return navigationElement;
 };
 
+exports.createArticle = function(document) {
+    var mainElement = document.createElement("main");
+    var sectionElements = [document.createElement("section")];
+    var asideElements = [];
+
+    document.querySelectorAll("h1, h2, h3, h4, h5, h6, p, figure, blockquote, img, table, pre, input, select, button").forEach(function(element) {
+        var lastSection = sectionElements[sectionElements.length - 1];
+
+        if (isInElementOf(element, "NAV") || isInElementOf(element, "FOOTER") || isInElementOf(element, "BLOCKQUOTE")) {
+            return;
+        }
+
+        if (["H1", "H2", "H3", "H4", "H5", "H6"].includes(element.tagName)) {
+            var newSection = document.createElement("section");
+
+            newSection.appendChild(element);
+            sectionElements.push(newSection);
+
+            return;
+        }
+
+        if (["INPUT", "SELECT", "BUTTON"].includes(element.tagName)) {
+            sectionElements.pop();
+            sectionElements.push(document.createElement("section"));
+
+            return;
+        }
+
+        var possibleLinkParent = findClosestElementDescendent(element, document.querySelectorAll("a"));
+
+        if (possibleLinkParent != null) {
+            lastSection.appendChild(possibleLinkParent);
+
+            return;
+        }
+
+        if (element.tagName == "IMG" && isInElementOf(element, "FIGURE")) {
+            return; // If image is in a figure, then the figure should be in the article at some point
+        }
+
+        if (element.tagName == "FIGURE") {
+            var newFigure = document.createElement("figure");
+            var newImage = document.createElement("img");
+            var newCaption = document.createElement("figcaption");
+
+            if (element.querySelectorAll("img").length > 0) {
+                newImage.src = element.querySelectorAll("img")[0].src;
+                newImage.alt = element.querySelectorAll("img")[0].alt;
+            } else {
+                return;
+            }
+
+            if (element.querySelectorAll("figcaption p, figcaption").length > 0) {
+                newCaption.textContent = element.querySelectorAll("figcaption p, figcaption")[0].textContent;
+                newCaption.textContent = element.querySelectorAll("figcaption p, figcaption")[0].textContent;
+            } else {
+                return;
+            }
+
+            newFigure.appendChild(newImage);
+            newFigure.appendChild(newCaption);
+
+            lastSection.appendChild(newFigure);
+
+            return;
+        }
+
+        lastSection.append(element);
+    });
+
+    sectionElements.forEach(function(sectionElement) {
+        var encounteredParagraphs = false;
+
+        if (sectionElement.textContent.trim() == "") { // Redundant section
+            return;
+        }
+
+        sectionElement.querySelectorAll("p").forEach(function(element) {
+            if (!isInElementOf(element, "A")) {
+                encounteredParagraphs = true;
+            }
+        });
+
+        if (!encounteredParagraphs) {
+            var linkElements = [];
+            var imageBeforeLinkMode = false;
+            var imageToInsert = null;
+
+            sectionElement.querySelectorAll("a, img").forEach(function(element) {
+                if (linkElements.length == 0 && element.tagName == "IMG") {
+                    imageBeforeLinkMode = true;
+                }
+
+                if (element.tagName == "IMG" && imageBeforeLinkMode) {
+                    imageToInsert = element;
+                }
+
+                if (element.tagName == "A") {
+                    if (imageBeforeLinkMode && imageToInsert != null) {
+                        element.prepend(imageToInsert);
+                        linkElements.push(element);
+                    }
+                }
+            });
+
+            var asideElement = document.createElement("aside");
+
+            asideElement.setAttribute("list", "");
+
+            if (linkElements.length > 0) {
+                if (sectionElement.querySelectorAll("h1, h2, h3, h4, h5, h6").length > 0) {
+                    asideElement.appendChild(sectionElement.querySelectorAll("h1, h2, h3, h4, h5, h6")[0]);
+                }
+
+                linkElements.forEach(function(linkElement) {
+                    asideElement.appendChild(linkElement);
+                });
+    
+                asideElements.push(asideElement);
+            }
+
+            return;
+        }
+
+        mainElement.appendChild(sectionElement);
+    });
+
+    return {
+        mainElement,
+        asideElements
+    };
+};
+
 exports.simplifyHtml = function(html, url) {
     var currentDocument = new jsdom.JSDOM(html, {
         url,
@@ -115,7 +274,29 @@ exports.simplifyHtml = function(html, url) {
         resources: "usable"
     }).window.document;
 
+    currentDocument.querySelectorAll("*").forEach(function(element) {
+        DENY_ELEMENT_ATTRIBUTES.forEach((attribute) => element.removeAttribute(attribute));
+
+        for (var i = 0; i < element.attributes.length; i++) {
+            if (element.attributes[i].name.startsWith("data-") || element.attributes[i].name.startsWith("on")) {
+                element.removeAttribute(element.attributes[i]);
+            }
+        }
+
+        if (element.tagName == "IMG" && (element.getAttribute("src") || "").startsWith("//")) {
+            element.setAttribute("src", "https:" + element.getAttribute("src"));
+        }
+    });
+
     newDocument.body.appendChild(exports.createNavigation(currentDocument));
+
+    var article = exports.createArticle(currentDocument);
+
+    newDocument.body.appendChild(article.mainElement);
+
+    article.asideElements.forEach(function(asideElement) {
+        newDocument.body.appendChild(asideElement);
+    });
 
     return newDocument.body.innerHTML;
 };
