@@ -261,6 +261,24 @@ exports.createArticle = function(document) {
     };
 };
 
+exports.createFooter = function(document) {
+    var footerElement = document.createElement("footer");
+
+    if (document.querySelectorAll("footer").length == 0) {
+        return footerElement;
+    }
+
+    document.querySelectorAll("footer")[0].querySelectorAll("a, p, small").forEach(function(element) {
+        if (element.tagName == "A" && (isInElementOf(element, "P") || isInElementOf(element, "SMALL"))) {
+            return; // If link is in a paragraph or small element, then the link should be in the article at some point
+        }
+
+        footerElement.appendChild(element);
+    });
+
+    return footerElement;
+};
+
 exports.simplifyHtml = function(html, url) {
     var currentDocument = new jsdom.JSDOM(html, {
         url,
@@ -297,6 +315,8 @@ exports.simplifyHtml = function(html, url) {
     article.asideElements.forEach(function(asideElement) {
         newDocument.body.appendChild(asideElement);
     });
+
+    newDocument.body.appendChild(exports.createFooter(currentDocument));
 
     return newDocument.body.innerHTML;
 };
