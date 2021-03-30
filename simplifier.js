@@ -279,6 +279,34 @@ exports.createFooter = function(document) {
     return footerElement;
 };
 
+exports.determineTheme = function(document) {
+    var themeData = {
+        "tn:accent1": document.querySelectorAll("meta[name='theme-color']")[0].getAttribute("content") || "#ebebeb"
+    };
+
+    return themeData;
+};
+
+exports.createHeadElements = function(document) {
+    var elements = [];
+    var metas = {...exports.determineTheme(document)};
+
+    if (document.querySelectorAll("title").length != 0) {
+        elements.push(document.querySelectorAll("title")[0]);
+    }
+
+    for (var meta in metas) {
+        var metaElement = document.createElement("meta");
+
+        metaElement.name = meta;
+        metaElement.content = metas[meta];
+
+        elements.push(metaElement);
+    }
+
+    return elements;
+}
+
 exports.simplifyHtml = function(html, url) {
     var currentDocument = new jsdom.JSDOM(html, {
         url,
@@ -304,6 +332,10 @@ exports.simplifyHtml = function(html, url) {
         if (element.tagName == "IMG" && (element.getAttribute("src") || "").startsWith("//")) {
             element.setAttribute("src", "https:" + element.getAttribute("src"));
         }
+    });
+
+    exports.createHeadElements(currentDocument).forEach(function(headElement) {
+        newDocument.body.appendChild(headElement);
     });
 
     newDocument.body.appendChild(exports.createNavigation(currentDocument));
