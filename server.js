@@ -107,7 +107,7 @@ app.get("/access", function(req, res) {
         });
     }).then(function(encryptionData) {
         res
-            .status(resource.status == 200 ? 200 : 504)
+            .status(resource.status == 200 ? 200 : 502)
             .type(resource.mimetype)
             .set("Tn-Encryption-Counter", Buffer.from(encryptionData.counter).toString("hex"))
             .send(Buffer.from(encryptionData.buffer))
