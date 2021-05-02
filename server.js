@@ -28,6 +28,7 @@ function statusBlocked(res) {
 
 app.use(function(req, res, next) {
     res.set("X-Powered-By", "ThunderNet");
+    res.set("Access-Control-Allow-Origin", "*");
     next();
 });
 
