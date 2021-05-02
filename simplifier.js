@@ -261,6 +261,52 @@ exports.createArticle = function(document) {
     };
 };
 
+exports.createFooter = function(document) {
+    var footerElement = document.createElement("footer");
+
+    if (document.querySelectorAll("footer").length == 0) {
+        return footerElement;
+    }
+
+    document.querySelectorAll("footer")[0].querySelectorAll("a, p, small").forEach(function(element) {
+        if (element.tagName == "A" && (isInElementOf(element, "P") || isInElementOf(element, "SMALL"))) {
+            return; // If link is in a paragraph or small element, then the link should be in the article at some point
+        }
+
+        footerElement.appendChild(element);
+    });
+
+    return footerElement;
+};
+
+exports.determineTheme = function(document) {
+    var themeData = {
+        "tn:accent1": document.querySelectorAll("meta[name='theme-color']")[0].getAttribute("content") || "#ebebeb"
+    };
+
+    return themeData;
+};
+
+exports.createHeadElements = function(document) {
+    var elements = [];
+    var metas = {...exports.determineTheme(document)};
+
+    if (document.querySelectorAll("title").length != 0) {
+        elements.push(document.querySelectorAll("title")[0]);
+    }
+
+    for (var meta in metas) {
+        var metaElement = document.createElement("meta");
+
+        metaElement.name = meta;
+        metaElement.content = metas[meta];
+
+        elements.push(metaElement);
+    }
+
+    return elements;
+}
+
 exports.simplifyHtml = function(html, url) {
     var currentDocument = new jsdom.JSDOM(html, {
         url,
@@ -288,6 +334,10 @@ exports.simplifyHtml = function(html, url) {
         }
     });
 
+    exports.createHeadElements(currentDocument).forEach(function(headElement) {
+        newDocument.body.appendChild(headElement);
+    });
+
     newDocument.body.appendChild(exports.createNavigation(currentDocument));
 
     var article = exports.createArticle(currentDocument);
@@ -297,6 +347,8 @@ exports.simplifyHtml = function(html, url) {
     article.asideElements.forEach(function(asideElement) {
         newDocument.body.appendChild(asideElement);
     });
+
+    newDocument.body.appendChild(exports.createFooter(currentDocument));
 
     return newDocument.body.innerHTML;
 };
